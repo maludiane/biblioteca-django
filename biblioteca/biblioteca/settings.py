@@ -29,19 +29,30 @@ ALLOWED_HOSTS = []
 
 
 # Application definition
- 
+
 INSTALLED_APPS = [
-    'django.contrib.admin',
-    'django.contrib.auth',
-    'django.contrib.contenttypes',
-    'django.contrib.sessions',
-    'django.contrib.messages',
-    'django.contrib.staticfiles',
+    "django.contrib.admin",
+    "django.contrib.auth",
+    "django.contrib.contenttypes",
+    "django.contrib.sessions",
+    "django.contrib.messages",
+    "django.contrib.staticfiles",
     # Django REST framework
-    'rest_framework',
+    "rest_framework",
     # Toys application
-    'core.apps.CoreConfig',
+    "core.apps.CoreConfig",
+    # Django Filters
+    "django_filters",
 ]
+REST_FRAMEWORK = {
+    "DEFAULT_PAGINATION_CLASS": "core.pagination.LimitOffsetPagination",
+    "PAGE_SIZE": 5,
+    "DEFAULT_FILTER_BACKENDS": (
+        "rest_framework.filters.SearchFilter",
+        "django_filters.rest_framework.DjangoFilterBackend",
+        "rest_framework.filters.OrderingFilter",
+    ),
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -107,7 +118,7 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.1/topics/i18n/
 
-LANGUAGE_CODE = 'en-us'
+LANGUAGE_CODE = 'pt-br'
 
 TIME_ZONE = 'UTC'
 
