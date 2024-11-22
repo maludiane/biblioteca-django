@@ -1,8 +1,6 @@
 from rest_framework import serializers
 from .models import Categoria, Autor, Livro, Colecao
 from django.contrib.auth.models import User
-
-
 from rest_framework import serializers
 from .models import Categoria, Autor, Livro, Colecao
 
@@ -10,21 +8,21 @@ from .models import Categoria, Autor, Livro, Colecao
 class CategoriaSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Categoria
-        fields = ["id", "nome"]
+        fields = ["__all__"]
 
 
 class AutorSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = Autor
-        fields = ["id", "nome"]
+        fields = ["__all__"]
 
 
 class LivroSerializer(serializers.HyperlinkedModelSerializer):
     autor = serializers.SlugRelatedField(
-        queryset=Autor.objects.all(), slug_field="name"
+        queryset=Autor.objects.all(), slug_field="nome"
     )
     categoria = serializers.SlugRelatedField(
-        queryset=Categoria.objects.all(), slug_field="name"
+        queryset=Categoria.objects.all(), slug_field="nome"
     )
 
     class Meta:
@@ -41,23 +39,14 @@ class LivroSerializer(serializers.HyperlinkedModelSerializer):
 class UserSerializer(serializers.HyperlinkedModelSerializer):
     class Meta:
         model = User
-        fields = [
-            "id",
-            "username",
-            "email",
-        ]
+        fields = ["__all__"]
 
 
 class ColecaoSerializer(serializers.ModelSerializer):
     livros = LivroSerializer(many=True)
     colecionador = UserSerializer()
+    owner = serializers.ReadOnlyField(source="owner.username")
 
     class Meta:
         model = Colecao
-        fields = [
-            "id",
-            "nome",
-            "descricao",
-            "livros",
-            "colecionador",
-        ]
+        fields = ["__all__", "owner", "livros", "colecionador"]
