@@ -8,7 +8,7 @@ from .models import Colecao, Livro, Autor, Categoria
 
 class ColecaoTests(APITestCase):
     def setUp(self):
-        # Configurar usuários e tokens
+        
         self.user = User.objects.create_user(
             username="user01", email="user01@example.com", password="user01P4ssw0rD"
         )
@@ -19,7 +19,7 @@ class ColecaoTests(APITestCase):
         )
         self.other_user_token = Token.objects.create(user=self.other_user)
 
-        # Configurar livros e coleções
+        
         self.autor = Autor.objects.create(nome="Autor Exemplo")
         self.categoria = Categoria.objects.create(nome="Ficção")
         self.livro = Livro.objects.create(

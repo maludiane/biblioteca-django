@@ -6,7 +6,7 @@ from django.contrib.auth.models import User
 class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
-        fields = "__all__"  # Inclui todos os campos
+        fields = "__all__"  
 
 
 class AutorSerializer(serializers.ModelSerializer):
@@ -24,8 +24,8 @@ class LivroSerializer(serializers.ModelSerializer):
 class ColecaoSerializer(serializers.ModelSerializer):
     livros = LivroSerializer(
         many=True, read_only=True
-    )  # Serializa os livros relacionados
-    colecionador = serializers.StringRelatedField()  # Exibe o nome do colecionador
+    )  
+    colecionador = serializers.StringRelatedField() 
 
     class Meta:
         model = Colecao
