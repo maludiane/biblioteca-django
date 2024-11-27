@@ -1,76 +1,98 @@
-from django.test import TestCase
+from rest_framework import status
 from rest_framework.test import APITestCase
-from rest_framework.test import APIClient
-from rest_framework.authtoken.models import Token
 from django.contrib.auth.models import User
-from .models import Colecao  
+from rest_framework.authtoken.models import Token
+from django.urls import reverse
+from .models import Colecao, Livro, Autor, Categoria
+
 
 class ColecaoTests(APITestCase):
-
     def setUp(self):
-        # Configuração inicial: criar um usuário e gerar um token
-        self.user = User.objects.create_user(username="superuser", password="superuser")
-        self.token = Token.objects.create(user=self.user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {self.token.key}")
+        # Configurar usuários e tokens
+        self.user = User.objects.create_user(
+            username="user01", email="user01@example.com", password="user01P4ssw0rD"
+        )
+        self.user_token = Token.objects.create(user=self.user)
 
-    def test_criar_colecao_autenticado(self):
-        # Enviar requisição para criar coleção
-        data = {"nome": "Minha Coleção",
-        "id": self.user.id, }
-        response = self.client.post("/api/colecoes/", data)
+        self.other_user = User.objects.create_user(
+            username="user02", email="user02@example.com", password="user02P4ssw0rD"
+        )
+        self.other_user_token = Token.objects.create(user=self.other_user)
 
-        # Verificar a resposta e a associação da coleção ao usuário
-        self.assertEqual(response.status_code, 201)
-        self.assertEqual(Colecao.objects.count(), 1)
-        self.assertEqual(Colecao.objects.first().owner, self.user)
+        # Configurar livros e coleções
+        self.autor = Autor.objects.create(nome="Autor Exemplo")
+        self.categoria = Categoria.objects.create(nome="Ficção")
+        self.livro = Livro.objects.create(
+            titulo="Livro Exemplo",
+            autor=self.autor,
+            categoria=self.categoria,
+            publicado_em="2023-01-01",
+        )
+        self.colecao = Colecao.objects.create(
+            nome="Coleção Exemplo", colecionador=self.user
+        )
+        self.colecao.livros.add(self.livro)
 
-    def test_editar_deletar_apenas_proprietario(self):
-        # Criar coleção associada ao usuário
-        colecao = Colecao.objects.create(nome="Coleção Pessoal", owner=self.user)
+    def authenticate_user(self, token):
+        self.client.credentials(HTTP_AUTHORIZATION=f"Token {token.key}")
 
-        # Criar um segundo usuário
-        other_user = User.objects.create_user(username="other_user", password="password456")
-        other_token = Token.objects.create(user=other_user)
-        self.client.credentials(HTTP_AUTHORIZATION=f"Token {other_token.key}")
+    def test_create_colecao_authenticated(self):
+        self.authenticate_user(self.user_token)
+        url = reverse("colecao-list")
+        data = {
+            "nome": "Nova Coleção",
+            "descricao": "Descrição da nova coleção",
+            "livros": [self.livro.id],
+        }
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED)
+        self.assertEqual(response.data["nome"], "Nova Coleção")
 
-        # Tentar editar a coleção
-        response_edit = self.client.put(f"/api/colecoes/{colecao.id}/", {"nome": "Novo Nome"})
-        self.assertEqual(response_edit.status_code, 403)
+    def test_create_colecao_unauthenticated(self):
+        url = reverse("colecao-list")
+        data = {
+            "nome": "Nova Coleção Não Autenticada",
+            "descricao": "Descrição sem autenticação",
+            "livros": [self.livro.id],
+        }
+        response = self.client.post(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)
 
-        # Tentar deletar a coleção
-        response_delete = self.client.delete(f"/api/colecoes/{colecao.id}/")
-        self.assertEqual(response_delete.status_code, 403)
+    def test_update_colecao_by_owner(self):
+        self.authenticate_user(self.user_token)
+        url = reverse("colecao-detail", args=[self.colecao.id])
+        data = {"nome": "Coleção Atualizada"}
+        response = self.client.patch(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data["nome"], "Coleção Atualizada")
 
-    def test_acoes_usuario_nao_autenticado(self):
-        # Remover credenciais
-        self.client.credentials()
+    def test_update_colecao_by_non_owner(self):
+        self.authenticate_user(self.other_user_token)
+        url = reverse("colecao-detail", args=[self.colecao.id])
+        data = {"nome": "Tentativa de Atualização"}
+        response = self.client.patch(url, data, format="json")
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        # Tentar criar uma coleção
-        response_create = self.client.post("/api/colecoes/", {"nome": "Coleção Pública"})
-        self.assertEqual(response_create.status_code, 401)
+    def test_delete_colecao_by_owner(self):
+        self.authenticate_user(self.user_token)
+        url = reverse("colecao-detail", args=[self.colecao.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
 
-        # Criar uma coleção associada ao usuário autenticado
-        colecao = Colecao.objects.create(nome="Coleção Privada", owner=self.user)
+    def test_delete_colecao_by_non_owner(self):
+        self.authenticate_user(self.other_user_token)
+        url = reverse("colecao-detail", args=[self.colecao.id])
+        response = self.client.delete(url)
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
 
-        # Tentar editar e deletar sem autenticação
-        response_edit = self.client.put(f"/api/colecoes/{colecao.id}/", {"nome": "Novo Nome"})
-        response_delete = self.client.delete(f"/api/colecoes/{colecao.id}/")
+    def test_list_colecoes_authenticated(self):
+        self.authenticate_user(self.user_token)
+        url = reverse("colecao-list")
+        response = self.client.get(url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertGreaterEqual(len(response.data), 1)
 
-        self.assertEqual(response_edit.status_code, 401)
-        self.assertEqual(response_delete.status_code, 401)
-
-    def test_listar_colecoes_autenticado(self):
-        # Criar coleções associadas ao usuário
-        Colecao.objects.create(nome="Coleção 1", owner=self.user)
-        Colecao.objects.create(nome="Coleção 2", owner=self.user)
-
-        # Enviar requisição de listagem
-        response = self.client.get("/api/colecoes/")
-
-        # Verificar a resposta
-        self.assertEqual(response.status_code, 200)
-        self.assertEqual(len(response.data), 2)
-        self.assertEqual(response.data[0]["nome"], "Coleção 1")
-        self.assertEqual(response.data[1]["nome"], "Coleção 2")
-
-
+    def test_list_colecoes_unauthenticated(self):
+        url = reverse("colecao-list")
+        response = self.client.get(url, format="json")
+        self.assertEqual(response.status_code, status.HTTP_401_UNAUTHORIZED)

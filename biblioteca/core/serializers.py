@@ -1,52 +1,41 @@
 from rest_framework import serializers
 from .models import Categoria, Autor, Livro, Colecao
 from django.contrib.auth.models import User
-from rest_framework import serializers
-from .models import Categoria, Autor, Livro, Colecao
 
 
-class CategoriaSerializer(serializers.HyperlinkedModelSerializer):
+class CategoriaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Categoria
-        fields = ["__all__"]
+        fields = "__all__"  # Inclui todos os campos
 
 
-class AutorSerializer(serializers.HyperlinkedModelSerializer):
+class AutorSerializer(serializers.ModelSerializer):
     class Meta:
         model = Autor
-        fields = ["__all__"]
+        fields = "__all__"
 
 
-class LivroSerializer(serializers.HyperlinkedModelSerializer):
-    autor = serializers.SlugRelatedField(
-        queryset=Autor.objects.all(), slug_field="nome"
-    )
-    categoria = serializers.SlugRelatedField(
-        queryset=Categoria.objects.all(), slug_field="nome"
-    )
-
+class LivroSerializer(serializers.ModelSerializer):
     class Meta:
         model = Livro
-        fields = [
-            "id",
-            "titulo",
-            "autor",
-            "categoria",
-            "publicado_em",
-        ]
-
-
-class UserSerializer(serializers.HyperlinkedModelSerializer):
-    class Meta:
-        model = User
-        fields = ["__all__"]
+        fields = "__all__"
 
 
 class ColecaoSerializer(serializers.ModelSerializer):
-    livros = LivroSerializer(many=True)
-    colecionador = UserSerializer()
-    owner = serializers.ReadOnlyField(source="owner.username")
+    livros = LivroSerializer(
+        many=True, read_only=True
+    )  # Serializa os livros relacionados
+    colecionador = serializers.StringRelatedField()  # Exibe o nome do colecionador
 
     class Meta:
         model = Colecao
-        fields = ["__all__", "owner", "livros", "colecionador"]
+        fields = "__all__"
+
+
+# Opcional: Serializer para o User (caso necessário)
+class UserSerializer(serializers.ModelSerializer):
+    colecoes = ColecaoSerializer(many=True, read_only=True)
+
+    class Meta:
+        model = User
+        fields = ["id", "username", "email", "colecoes"]

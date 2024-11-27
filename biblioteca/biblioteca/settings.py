@@ -59,7 +59,14 @@ REST_FRAMEWORK = {
         "django_filters.rest_framework.DjangoFilterBackend",
         "rest_framework.filters.OrderingFilter",
     ),
+    "DEFAULT_AUTHENTICATION_CLASSES": [
+        "rest_framework.authentication.TokenAuthentication",  
+    ],
+    "DEFAULT_PERMISSION_CLASSES": [
+        "rest_framework.permissions.IsAuthenticated", 
+    ],
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+
 }
 
 SPECTACULAR_SETTINGS = {
@@ -89,6 +96,7 @@ CORS_ALLOWED_ORIGINS = [
 ]
 
 CORS_URLS_REGEX = r"^/api/.*$"
+
 
 CORS_ALLOW_METHODS = (
     "DELETE",
